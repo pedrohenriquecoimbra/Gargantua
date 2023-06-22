@@ -1,6 +1,12 @@
 # Gargantua
 
 ![alt text](logo.png?raw=true)
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="logo_dark.png">
+  <source media="(prefers-color-scheme: light)" srcset="logo.png">
+  <img src="logo.png">
+</picture>
+
 
 Fully modular pipeline for processing raw data into publishing material, testing and developing correction methods.
 
