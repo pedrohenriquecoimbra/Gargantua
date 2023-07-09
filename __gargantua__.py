@@ -17,7 +17,7 @@ from PIL import ImageTk, Image, ImageDraw
 #from tkinter import *
 from tkinter import ttk
 from tkinter.messagebox import askyesnocancel, askquestion
-from tkinter.filedialog import askdirectory, askopenfilename, asksaveasfilename
+from tkinter.filedialog import askdirectory, askopenfilename, askopenfilenames, asksaveasfilename
 import tkinter as tk
 import art
 import __scripts__.gargantua as gg
@@ -318,9 +318,9 @@ class actvate_menu:
         self.hold_std = {'in': StringIO(), 'out': StringIO(),
                          'err': StringIO()}  # sys.stdout
         sys.stdin = self.hold_std['in']
-        # open('stdout.txt', 'w', buffering=1)
         sys.stdout = self.hold_std['out']
         sys.stderr = self.hold_std['err']
+        # open('stdout.txt', 'w', buffering=1)
 
         # Reset stdout
         #sys.stdout = sys.__stdout__
@@ -597,9 +597,19 @@ class actvate_menu:
         self.RightFrame.add(self.NotebookTextPromptTop, stretch="always")
 
         # PROMPT > WINDOW > SHELL
+        self.txtprompt = tk.Text(self.NotebookTextPromptTop, height=1,
+                                 state='normal', bg='black', fg='white', font=('Consolas', 12))
+        self.txtprompt.stringvar = tk.StringVar(value=welcometxt)
+        self.txtprompt.insert(tk.INSERT, self.txtprompt.stringvar.get())
+        self.txtprompt.config(state="disabled")
+        self.txtprompt.ysc = tk.Scrollbar(self.NotebookTextPromptTop, command=self.txtprompt.yview)
+        self.txtprompt['yscrollcommand'] = self.txtprompt.ysc.set
+        self.txtprompt.ysc.pack(side=tk.RIGHT, fill=tk.Y)
+        self.txtprompt.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+
+        """
         self.txtprompt = tktt.VerticalScrolledFrame(self.NotebookTextPromptTop)
         #self.txtprompt.pack(fill='both', expand=True)
-        self.NotebookTextPromptTop.add(self.txtprompt, text='Shell')
         self.txtprompt.canvas.config(background='black')
         self.txtprompt.stringvar = tk.StringVar(value=welcometxt)
 
@@ -608,11 +618,14 @@ class actvate_menu:
         self.txtprompt.label.bind('<Configure>', lambda e: self.txtprompt.label.config(
             wraplength=self.txtprompt.label.winfo_width()))
         self.txtprompt.label.pack(fill='both', expand=True)
+        """
+        self.NotebookTextPromptTop.add(self.txtprompt, text='Shell')
 
         self.sysvars = tktt.VerticalScrolledFrame(self.NotebookTextPromptTop)
         self.NotebookTextPromptTop.add(self.sysvars, text='System')
         sysvarstoshow = {"file path": pcd,
                          "CPUs": multiprocessing.cpu_count()}
+        sysvarstoshow.update(globals())
         for i, (k, v) in enumerate(sysvarstoshow.items()):
             tk.Label(self.sysvars.interior, text=k, bg='#D3D3D3',
                      justify='left', anchor='nw').grid(row=i+1, column=0, sticky='nswe')
@@ -626,6 +639,16 @@ class actvate_menu:
         self.RightFrame.add(self.NotebookTextPromptBot, stretch="always")
 
         # PROMPT > WINDOW > WARNINGS
+        self.errprompt = tk.Text(self.NotebookTextPromptBot, height=1,
+                                 state='normal', bg='black', fg='white', font=('Consolas', 12))
+        self.errprompt.stringvar = tk.StringVar()
+        self.errprompt.insert(tk.INSERT, self.errprompt.stringvar.get())
+        self.errprompt.config(state="disabled")
+        self.errprompt.ysc = tk.Scrollbar(self.NotebookTextPromptBot, command=self.errprompt.yview)
+        self.errprompt['yscrollcommand'] = self.errprompt.ysc.set
+        self.errprompt.ysc.pack(side=tk.RIGHT, fill=tk.Y)
+        self.errprompt.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+        """
         self.errprompt = tktt.VerticalScrolledFrame(
             self.NotebookTextPromptBot, bg='black')
         self.errprompt.canvas.config(background='black')
@@ -635,13 +658,20 @@ class actvate_menu:
         self.errprompt.label.bind('<Configure>', lambda e: self.errprompt.label.config(
             wraplength=self.errprompt.label.winfo_width()))
         self.errprompt.label.pack(fill='both', expand=True)
+        """
         self.NotebookTextPromptBot.add(self.errprompt, text='Warnings')
-
+        
         # PROMPT > WINDOW > TERMINAL
         self.terminalprompt = tk.Frame(self.NotebookTextPromptBot, bg='black')
         self.terminalprompt.cmd = tktt.Prompt(self.terminalprompt)
         self.terminalprompt.cmd.pack(fill='both', expand=True, anchor=tk.S)
         self.NotebookTextPromptBot.add(self.terminalprompt, text='Terminal')
+
+        # PROMPT > WINDOW > PYTHON INTERFACE
+        self.pythonprompt = tk.Frame(self.NotebookTextPromptBot, bg='black')
+        self.pythonprompt.cmd = tktt.CPython(self.pythonprompt, _globals=globals())
+        self.pythonprompt.cmd.pack(fill='both', expand=True, anchor=tk.S)
+        self.NotebookTextPromptBot.add(self.pythonprompt, text='Python')
 
         # PROMPT > WINDOW > BLOCKS
         def runselected__():
@@ -652,7 +682,7 @@ class actvate_menu:
                     self.menu, ["__init__", "API", "ntprocess"], 1))
 
                 _fc = gg.LazyCallable(trygetfromdict(self.menu, ['__init__', 'API', 'path'],
-                                                     os.path.abspath(os.path.join(pcd, '..', 'main.py'))),
+                                                     os.path.abspath(os.path.join(pcd, '__gargantua__.py'))),
                                       trygetfromdict(self.menu, ['__init__', 'API', 'function'], "api")).__get__().fc
                 apidic = {k: {k_: v_ for k_, v_ in v.items() if k_ in ['__init__'] or k in [
                     '__init__']} if isinstance(v, dict) else v for k, v in self.menu.items()}
@@ -856,22 +886,28 @@ class actvate_menu:
         else:
             self.runningtrack.set(0)
 
-        def update(txtwid, newprompt):
+        def __update__(txtwid, newprompt):
             cdt = datetime.datetime.fromtimestamp(
                 time.time()).strftime("[%d-%m-%Y %H:%M]")
             newprompt = newprompt.replace("\n", f"\n| ")
+            newprompt = newprompt.replace("\r", f"\r\n| ")
             newprompt = newprompt.replace("¤ ", "\n¤ ")
-            current = txtwid.stringvar.get()[-99999:]
-            current = current.replace('\n\n\n', '\n\n')
-            if current.endswith('\r\n'):
+            current = txtwid.get('end-2l', 'end')#[-99999:]
+            #current = current.replace('\n\n\n', '\n\n')
+            txtwid.config(state="normal")
+            if current.endswith('\r\n| \n'):
                 #txtwid.stringvar.set(re.sub('\n.*\r\n', '\n', txtwid.stringvar.get(
                 #)) + f'{new_prompt}\n')
-                txtwid.stringvar.set(current.rsplit(
-                    '\n', 2)[0] + f'\n{newprompt}')
+                txtwid.delete("end-2l", "end")
+                # current.rsplit('\n', 2)[1] + f'\n{newprompt}'
+                txtwid.insert(tk.INSERT, f"\n|' {newprompt}")
             else:
-                txtwid.stringvar.set(current + f'{newprompt}')
-            txtwid.canvas.update_idletasks()
-            txtwid.canvas.yview_moveto('1.0')
+                # newprompt = current + f'{newprompt}'
+                txtwid.insert(tk.INSERT, newprompt)
+            txtwid.config(state="disabled")
+
+            #txtwid.canvas.update_idletasks()
+            txtwid.yview_moveto('1.0')
 
         where = {'in': self.txtprompt,
                  'out': self.txtprompt, 'err': self.errprompt}
@@ -882,7 +918,7 @@ class actvate_menu:
             if prompt in ["", "\n"]:
                 continue
 
-            update(where[i], prompt)
+            __update__(where[i], prompt)
 
             # Reset stdout
             self.hold_std[i] = StringIO()
@@ -896,7 +932,7 @@ class actvate_menu:
             elif i == 'err':
                 sys.stderr = sys.__stderr__
                 sys.stderr = self.hold_std[i]
-
+        
         self.root_mother.after(1000,
                                lambda: self.update_std_pipe())  # call
 
@@ -1262,14 +1298,17 @@ class actvate_menu:
             self.refresh_tree()
 
     def add_addon(self, npath=None):
+        if isinstance(npath, str):
+            npath = [npath]
         if npath == None:
-            npath = askopenfilename(title='Select setup path',
+            npath = askopenfilenames(title='Select setup path',
                                     defaultextension='.yaml',
                                     filetypes=DEFAULT_FILE_TYPES)
-        if os.path.exists(npath) == False:
-            return
-        self.addon_path(npath)
-        self.refresh_tree(config_kwargs={"win": False})
+        for p in npath:
+            if os.path.exists(p) == False:
+                return
+            self.addon_path(p)
+            self.refresh_tree(config_kwargs={"win": False})
         return
 
     def addon_path(self, npath):
@@ -1864,7 +1903,7 @@ class actvate_menu:
 
 def main(*a, path=os.path.join(pcd, 'setup/readme.yaml'),
          waitimg=os.path.join(pcd, 'logo'), 
-         waittxt='Opening',
+         waittxt='Gargantua v0.1',
          welcometxt='WELCOME, WILKOMEN, BIENVENUE',
          font="",
          **kw):

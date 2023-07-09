@@ -5,3 +5,4 @@ __scrips__/__pycache__
 .r2py_out_sink.log
 .lastconfig
 Lib/*
+Lib_deprecated/*

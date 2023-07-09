@@ -3,6 +3,7 @@
 #import pandas as pd
 #import numpy as np
 
+import sys
 import tkinter as tk
 import PIL
 import tkinter.ttk as ttk
@@ -38,19 +39,51 @@ class ImageClick():
             self.command()
 
 
+class CPython(tk.Frame):
+    def __init__(self, parent, *args, _globals=globals(), **kw):
+        tk.Frame.__init__(self, parent, *args, **kw)
+        self._globals = _globals
+
+        self.cmd = tk.Text(self, height=1, bg='blue', fg='white', font=('Consolas', 12))
+        self.cmd.pack(side=tk.BOTTOM, fill=tk.X)#, expand=True)
+        self.shw = tk.StringVar(value=f'Python {sys.version}\n')
+        #self.prt = tk.Label(self.prompt.interior, textvariable=self.shw, anchor=tk.W, bg='black', fg='white', font=('Consolas', 12))
+        self.prt = tk.Text(self, height=1, state='normal', bg='black', fg='white', font=('Consolas', 12))
+        self.prt.insert(tk.INSERT, self.shw.get())
+        self.prt.config(state="disabled")
+        self.ysc = tk.Scrollbar(self, command=self.prt.yview)
+        self.prt['yscrollcommand'] = self.ysc.set
+        self.ysc.pack(side=tk.RIGHT, fill=tk.Y)
+        self.prt.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
+        self.cmd.bind('<Return>', self.run)
+
+    def run(self, event):
+        command = self.cmd.get('insert linestart', 'insert lineend')
+        self.shw.set(self.shw.get() + '> ' + command + '\n')
+        
+        if command == 'exit':
+            print('exit')
+            # exit()
+        p = eval(command, self._globals)
+        self.shw.set('{}{}\n'.format(self.shw.get(), str(p)))
+        self.prt.config(state="normal")
+        self.prt.insert(tk.INSERT, self.shw.get())
+        self.prt.config(state="disabled")
+        self.prt.yview_moveto('1.0')
+
 class Prompt(tk.Frame):
     def __init__(self, parent, *args, **kw):
         tk.Frame.__init__(self, parent, *args, **kw)
 
-        self.prompt = VerticalScrolledFrame(self, bg='black')
-        self.prompt.canvas.config(background='black')
-        self.prompt.pack(fill=tk.BOTH, expand=True, side=tk.TOP)
-        self.shw = tk.StringVar()
-        self.prt = tk.Label(self.prompt.interior, textvariable=self.shw, anchor=tk.W, bg='black', fg='white', font=('Consolas', 12))
-        self.prt.pack(fill=tk.BOTH, expand=False)
         self.cmd = tk.Text(self, height=1, bg='blue', fg='white', font=('Consolas', 12))
-        self.cmd.pack(side=tk.BOTTOM)#fill=tk.BOTH, expand=True)
-        self.prompt.pack_propagate(False)
+        self.cmd.pack(side=tk.BOTTOM, fill=tk.X)#, expand=True)
+        self.shw = tk.StringVar()
+        #self.prt = tk.Label(self.prompt.interior, textvariable=self.shw, anchor=tk.W, bg='black', fg='white', font=('Consolas', 12))
+        self.prt = tk.Text(self, height=1, state='disabled', bg='black', fg='white', font=('Consolas', 12))
+        self.ysc = tk.Scrollbar(self, command=self.prt.yview)
+        self.prt['yscrollcommand'] = self.ysc.set
+        self.ysc.pack(side=tk.RIGHT, fill=tk.Y)
+        self.prt.pack(side=tk.BOTTOM, fill=tk.BOTH, expand=True)
         self.cmd.bind('<Return>', self.run)
 
     def com(self, command):
@@ -61,25 +94,24 @@ class Prompt(tk.Frame):
             stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE, close_fds=True)
         m, e = p.communicate()
         #self.prt.insert('end', f'\n{m}')
-        self.shw.set('{}{}\n'.format(self.shw.get(), m.decode(("utf-8"))))
+        self.shw.set('{}{}\n'.format(self.shw.get(), str(m)))#.decode(("utf-8"))))
 
     def run(self, event):
-        #current = self.cmd.index(tk.INSERT)
         command = self.cmd.get('insert linestart', 'insert lineend')
         self.shw.set(self.shw.get() + '> ' + command + '\n')
-        #return
-        #command = self.cmd.get('1.0', 'end').split('\n')[-2]
+        
         if command == 'exit':
             print('exit')
-        #    exit()
+            # exit()
         p = sp.Popen(command, shell=True, bufsize=10,
             stdin=sp.PIPE, stdout=sp.PIPE, stderr=sp.PIPE, close_fds=False)
         m, e = p.communicate()
         #self.prt.insert('end', f'\n{m}')
-        self.shw.set('{}{}\n'.format(self.shw.get(), m.decode(("utf-8")) + e.decode(("utf-8"))))
-        
-        self.prompt.canvas.update_idletasks()
-        self.prompt.canvas.yview_moveto('1.0')
+        self.shw.set('{}{}{}\n'.format(self.shw.get(), m.decode(("utf-8")), e.decode(("utf-8"))))
+        self.prt.config(state="normal")
+        self.prt.insert(tk.INSERT, self.shw.get())
+        self.prt.config(state="disabled")
+        self.prt.yview_moveto('1.0')
 
 
 class VertNotebook(ttk.Frame):
@@ -456,7 +488,7 @@ class VerticalScrolledFrame(ttk.Frame):
         vscrollbar = ttk.Scrollbar(self, orient=tk.VERTICAL)
         vscrollbar.pack(fill=tk.Y, side=tk.RIGHT, expand=tk.FALSE)
         self.canvas = canvas = tk.Canvas(self, bd=0, highlightthickness=0,
-                           yscrollcommand=vscrollbar.set)
+                                         yscrollcommand=vscrollbar.set)
         canvas.pack(side=tk.LEFT, fill=tk.BOTH, expand=tk.TRUE)
         vscrollbar.config(command=canvas.yview)
 

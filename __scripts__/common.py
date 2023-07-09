@@ -672,7 +672,10 @@ class ECnetwork(datahandler):
 
 
 class ECsite(datahandler):
-    def __init__(self, SiteName, stpath="data/info/stations.xlsx", lupath="data/info/landuse.xlsx"):
+    def __init__(self, SiteName, mapath="data/info/", stpath="stations.xlsx", lupath="landuse.xlsx"):
+        stpath = os.path.join(mapath, stpath)
+        lupath = os.path.join(mapath, lupath)
+
         stations = pd.read_excel(stpath)
         stations.columns = map(str.lower, stations.columns)
                 
@@ -714,13 +717,14 @@ class ECsite(datahandler):
                 self.targetarea = 'Err: NotFound'
         else:
             self.targetarea = np.nan
-        
-        luinfo = pd.read_excel(lupath, index_col='CO')
-        luinfo.columns = map(str.lower, luinfo.columns)
-        luinfo = luinfo.to_dict()
-        self.lu_path = luinfo['landusefilepath'][self.co]
-        self.lu_metapath = luinfo['landusemetafilepath'][self.co]
-        self.lu_resolution = luinfo['resolution'][self.co]
+
+        if os.path.exists(lupath):
+            luinfo = pd.read_excel(lupath, index_col='CO')
+            luinfo.columns = map(str.lower, luinfo.columns)
+            luinfo = luinfo.to_dict()
+            self.lu_path = luinfo['landusefilepath'][self.co]
+            self.lu_metapath = luinfo['landusemetafilepath'][self.co]
+            self.lu_resolution = luinfo['resolution'][self.co]
         
     def get(self):
         print('\n'.join("%s: %s" % item for item in vars(self).items()))

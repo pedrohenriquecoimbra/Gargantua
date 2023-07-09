@@ -48,8 +48,7 @@ def casttypedictionary(dic, dt):
             if type(dic).__name__ != dt["type"]:
                 dic = globals()[dt["type"]](dic)
         except Exception as e:
-            print("dt", dt, "\ndic", dic)
-            warnings.warn(str(e))
+            warnings.warn(str(e) + f"\ndt: {dt}\ndic: {dic}")
         """
         if callable(dt):
             if type(dic).__name__ != dt.__name__:
@@ -87,7 +86,8 @@ def referencedictionary(d, meta=None, kinit=True):
                               for v__ in string]
                 else:
                     for sk, sv in dictionary.items():
-                        string = string.replace(sk, sv)
+                        if sv is not None:
+                            string = string.replace(sk, sv)
             return string
                 
         _init_ = {k_: refine(v_, shortcuts) for k_, v_ in v.pop("__init__", {}).items()}

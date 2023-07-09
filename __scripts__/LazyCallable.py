@@ -7,11 +7,11 @@ import pathlib
 # Julia
 
 class LazyCallable(object):
-    def __init__(self, name, fcn=None, pck=None):#pathlib.Path.cwd()):
+    def __init__(self, name, fcn=None, pkg=None):#pathlib.Path.cwd()):
         self.modn = name
         self.fc = None
         self.n = fcn
-        self.pck = str(pck) if pck else None
+        self.pkg = str(pkg) if pkg else None
 
     def __get_jl__(self, *a, **k):
         #from julia.api import Julia
@@ -26,14 +26,14 @@ class LazyCallable(object):
         if ('/' in self.modn) or ('\\' in self.modn):
             filn = os.path.basename(self.modn).split('.', 1)[0]
             dirn = os.path.dirname(self.modn)
-            self.modn = os.path.relpath(dirn, self.pck)
+            self.modn = os.path.relpath(dirn, self.pkg)
             self.modn = self.modn.replace(
                 '\\', '.') + '.' + filn if self.modn != '.' else filn
             #self.modn = self.modn.replace(
             #    '/', '.').replace('\\', '.')
         
         self.module = importlib.import_module(
-            self.modn)#, self.pck)
+            self.modn, self.pkg)
 
         if self.n is not None:
             fc = getattr(self.module, self.n)
