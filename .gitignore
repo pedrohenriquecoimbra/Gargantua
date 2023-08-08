@@ -4,5 +4,5 @@ __scrips__/__pycache__
 .tmp
 .r2py_out_sink.log
 .lastconfig
-Lib/*
+Lib/*/
 Lib_deprecated/*
