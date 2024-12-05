@@ -5,6 +5,7 @@ Common functions
 import pathlib
 import codecs
 from contextlib import contextmanager
+import warnings
 import inspect
 #import imp
 import sys
@@ -109,9 +110,8 @@ def suppress_stdout():
         try:  
             yield
         finally:
-            sys.stdout = old_stdout
-            
-
+            sys.stdout = old_stdout  
+        
 def popup(message='Done.'):
     import tkinter as tk
     from tkinter import messagebox
@@ -316,16 +316,32 @@ def multiprocess_framework(fc, multiprocess, loopvar, varname=None, multiappend=
         """Run assynchronously with a tip to reorder after"""
         pool = mp.Pool(min(multiprocess, mp.cpu_count()-1))
         callback_dict = {}
+        results = []
 
         for i, e in enumerate(loopvar):
             if varname:
                 kwargs.update({varname: e})
-                pool.apply_async(fc, kwds=kwargs,
+                result = pool.apply_async(fc, kwds=kwargs,
                                     callback=lambda x, j=i: callback_dict.update({j: x}))
             else:
-                pool.apply_async(fc, args=(e), kwds=kwargs,
+                result = pool.apply_async(fc, args=(e), kwds=kwargs,
                                     callback=lambda x, j=i: callback_dict.update({j: x}))
-            
+            results.append(result)
+        
+        while True:
+            time.sleep(1)
+            # catch exception if results are not ready yet
+            try:
+                ready = [result.ready() for result in results]
+                successful = [result.successful() for result in results]
+            except Exception:
+                continue
+            # exit loop if all tasks returned success
+            if all(successful):
+                break
+            # raise exception reporting exceptions received from workers
+            if all(ready) and not all(successful):
+                raise Exception(f'Workers raised following exceptions {[result._value for result in results if not result.successful()]}')
         pool.close()
         pool.join()
 
@@ -336,6 +352,7 @@ def multiprocess_framework(fc, multiprocess, loopvar, varname=None, multiappend=
     if multiprocess:
         if verbosity: print('Put back into the good order.')
         raw_lst = sorted(callback_dict.items())
+        if not raw_lst: warnings.warn(f'Callback is an empty list ({raw_lst})')
         raw_lst = list(np.array(raw_lst)[:, 1])
 
     if not append:
@@ -354,10 +371,10 @@ def append_class_in_list(npools, el_lst, verbosity=1):
     Separate in multiprocess groups and then
     Run assynchronously with a tip to reorder after
     """    
-    def one_loop(i_, el_lst_):
+    def one_loop(el_lst_):
         N = len(el_lst_)
         if N==0:
-            return {i_: None}
+            return None
         i = 0
         for _, w in enumerate(el_lst_):
             if verbosity: print(str(i).zfill(3), '/', str(N).zfill(3), end='\r')
@@ -399,7 +416,7 @@ def append_class_in_list(npools, el_lst, verbosity=1):
                                 el_clas.__dict__[k], w.__dict__[k])
                     #wv_Fx.__dict__ = dict([(k, [wv_Fx.__dict__[k]] + [w.__dict__[k]]) for k in wv_Fx.__dict__])
             i += 1
-        return {i_: el_clas}
+        return el_clas
 
     def cascading_loop(npools, el_lst_):
         npools = min(npools, mp.cpu_count()-1)
@@ -408,11 +425,12 @@ def append_class_in_list(npools, el_lst, verbosity=1):
         n_ = int(np.ceil(len(el_lst_)/npools))
         for i in range(npools):
             pool.apply_async(one_loop, args=(i, el_lst_[i*n_:(i+1)*n_]),
-                             callback=lambda x: callback_dict.update(x))
+                             callback=lambda x, j=i: callback_dict.update({j: x}))
         pool.close()
         pool.join()
 
         el_lst_ = sorted(callback_dict.items())
+        if not el_lst_: warnings.warn(f'Callback is an empty list ({el_lst_})')
         el_lst_ = list(np.array(el_lst_)[:, 1])
         return el_lst_
 
@@ -422,7 +440,7 @@ def append_class_in_list(npools, el_lst, verbosity=1):
         el_lst = cascading_loop(active_pools, el_lst)
         active_pools = int(np.ceil(active_pools/2))
         
-    cl_dat = one_loop(0, el_lst)
+    cl_dat = one_loop(el_lst)
     cl_dat = cl_dat[0]
         
     return cl_dat
@@ -709,10 +727,10 @@ class ECsite(datahandler):
 
         if self.targetareafilepath not in [None, np.nan]:            
             if os.path.isfile(self.targetareafilepath):
-                self.targetarea = gpd.read_file(
-                    self.targetareafilepath, driver='KML')
+                self.targetarea = gpd.read_file(self.targetareafilepath)
                 self.targetarea = self.targetarea.to_crs("EPSG:3035")
-                self.targetarea = geometry.Polygon(self.targetarea.geometry[0])
+                self.targetarea = ops.unary_union(self.targetarea.geometry)
+                #self.targetarea = geometry.Polygon(self.targetarea.geometry[0])
             else:
                 self.targetarea = 'Err: NotFound'
         else:
